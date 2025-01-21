@@ -13,11 +13,20 @@ def git_commit_and_push(repo_url, local_path, commit_message, branch="main"):
         # Change directory to the repository
         os.chdir(local_path)
 
-        # Check if branch exists
-        branches = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True)
+        # Check if the branch exists locally
+        branches = subprocess.run(["git", "branch"], capture_output=True, text=True)
         if branch not in branches.stdout:
-            print(f"Branch '{branch}' not found. Creating branch '{branch}'...")
-            subprocess.run(["git", "checkout", "-b", branch], check=True)
+            print(f"Branch '{branch}' not found locally. Attempting to switch or create it...")
+            # Try checking out the branch if it exists remotely
+            try:
+                subprocess.run(["git", "checkout", branch], check=True)
+            except subprocess.CalledProcessError:
+                # Create the branch if it doesn't exist
+                print(f"Creating branch '{branch}' locally...")
+                subprocess.run(["git", "checkout", "-b", branch], check=True)
+        else:
+            print(f"Switching to branch '{branch}'...")
+            subprocess.run(["git", "checkout", branch], check=True)
 
         # Check if the repository is empty
         if not os.listdir(local_path):
@@ -28,12 +37,15 @@ def git_commit_and_push(repo_url, local_path, commit_message, branch="main"):
             subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
 
         # Stage all changes
+        print("Staging all changes...")
         subprocess.run(["git", "add", "."], check=True)
 
         # Commit changes
+        print("Committing changes...")
         subprocess.run(["git", "commit", "-m", commit_message], check=True)
 
-        # Push changes
+        # Push changes to the remote repository
+        print("Pushing changes to the remote repository...")
         subprocess.run(["git", "push", "--set-upstream", "origin", branch], check=True)
 
         print("Changes committed and pushed successfully!")
